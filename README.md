@@ -17,6 +17,6 @@
     you can compile the code in this directory by simply running the command `make`.
 
 
-  1. Edit `brainfuck.s`
-  2. Run `make`
-  3. Run `./brainfuck`
+`
+  1. Run `make`
+  2. Run `./brainfuck "bf_file"`
