@@ -19,7 +19,7 @@ brainfuck:
   
   pushq %rax
 
-  movq $100000, %rdi
+  movq $32768, %rdi
   call malloc
   movq %rax, %rdi
   popq %r10
@@ -70,7 +70,7 @@ compile:
 
 prologueMaker:
   
-  mov $0xEC894855, (%r13) #mov %rbp, %rsp + pushq %rbp
+  movq $0x55ec8948, (%r13) #mov %rbp, %rsp + pushq %rbp
   addq $4, %r13
   movq $0x5741, (%r13) #pushq %r15
   addq $2, %r13
@@ -78,12 +78,13 @@ prologueMaker:
   addq $2, %r13
   movq $0xff8949, (%r13)  #movq %rdi, %r15
   addq $3, %r13
-  movq $0x00e68349, (%r13) #and $0, %r14 
+  movq $0x00e68349, (%r13)
   addq $4, %r13
 
 #Loads the next instruction/character/command into %dil (rdi) 1 byte
 parsingLoop:
 
+  
   movb (%r15, %r14), %dil
   #Parsing switch logic, we check what character we are dealing with
   # Check for different possible cases, ignore if not part of the cases. 
@@ -113,16 +114,14 @@ parsingLoop:
 printChar:
 
   incq %r14  #increment our instruction pointer
-  movq $0x00e68348, (%r13) #and $0, %rsi
-  addq $4, %r13
-  movq $0x37348a43, (%r13) #movb (%r15, %r14, 1), %sil
-  addq $4, %r13
-  movq $0xBA49, (%r13)    #movq $$printCharFunc, %r10
+
+  movq 0x373c8b4b, (%r13) #movq (%r15, %r14, 1), %rdi
+  movq $0xBA49, (%r13)    #movq $my_putchar, %r10
   addq $2, %r13
   movq $printCharFunc, (%r13)
   addq $8, %r13
   movq $0xD2FF41, (%r13)      #call *%r10
-  addq $3, %r13
+  addq $3
 
   
   jmp parsingLoop
@@ -131,9 +130,12 @@ printChar:
 getChar:
   
   
+
+  movq $0x373c8d4b, (%r13)
+  addq $4, %r13
   movq $0xBA49, (%r13) #movq $getCharFunc, %r10
   addq $2, %r13
-  movq $getCharFunc, (%r13) 
+  movq $getCharFunc, (%r13)
   addq $8, %r13
   movq $0xD2FF41, (%r13) #call *%r10
   addq $3, %r13
@@ -162,45 +164,26 @@ decrVal:
 
   
 loopStart:
-  cmpw $0x5d3d, 1(%r15, %r14, 1)
-  jne zeroing
   
-  movq $0x003704c74b, (%r13)
-  addq $5, %r13
-  addq $3, %r14
-  jmp parsingLoop
-
-
-zeroing:
-  pushq %r13
-  mov $0x00373c8043, (%r13)
-  addq $5, %r13
-  movq $0x840f, (%r13)
-  addq $6, %r13
   incq %r14
+  push %r13
   jmp parsingLoop
-
 
 
 loopEnd:
 
-    mov $0x00373c8043, (%r13)
-    addq $5, %r13
-    movq $0x850f, (%r13)    #jne begin
-    addq $2, %r13
-
-    popq %r12
-    movq %r13, %rax
-    subq %r12, %rax
-    subq $7, %rax
-    mov %eax, 7(%r12)
-    negq %rax
-    mov %eax, (%r13)
-    addq $4, %r13
-    incq %r14
-    jmp parsingLoop
+  popq %r12
 
   
+  movq $0x00373c8043, (%r13) #cmpb $0, (%r15, %r14, 1)
+  addq $5, %r13
+  movq $0x0f85, (%r13) #jne begin (begin will now be calculated)
+  addq $2, (%r13)
+  
+  
+
+  incq %r14
+  jmp parsingLoop
 
  
 prevAddr:
@@ -255,11 +238,17 @@ endOfParsing:
 
 
 
+
+
+
+
+
+
 printCharFunc:
 
   pushq %rbp
   movq %rsp, %rbp
-  movq $0, %rax
+  movq %rdi, %rsi
   movq $charPrint, %rdi
   call printf
   movq %rbp, %rsp
@@ -268,28 +257,22 @@ printCharFunc:
 
 
 getCharFunc:
-   
-  push %rbp
-  mov %rsp, %rbp
-
-  push %rdi
   
-  subq $8, %rsp
+  push %rdi
+
+  subq $16, %rsp
 	movq $0, %rax
 	movq $input, %rdi
 	leaq -8(%rbp), %rsi    
 	call scanf
-  movq -8(%rbp), %rdi
-  movb %dil, (%r15, %r14, 1)
   
   addq $8, %rsp
   pop %rdi
+  movb %dil, (%r15, %r14, 1)
 
-  mov %rbp, %rsp
-  pop %rbp
+  pop %rdi
 
   ret
-
 
 
   
