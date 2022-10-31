@@ -19,7 +19,7 @@ brainfuck:
   
   pushq %rax
 
-  movq $100000, %rdi
+  movq $10000000, %rdi
   call malloc
   movq %rax, %rdi
   popq %r10
@@ -142,36 +142,65 @@ getChar:
   jmp parsingLoop
 
 
-incrVal:
-  
 
-
-  movq $0x3704ff43, (%r13)  #incb (%r15, %r14, 1)
-  addq $4, %r13
-  incq %r14  
-  jmp parsingLoop
 
 decrVal:
-  
+ 
+ movq $-1, %r12 #we start at -1 if we come from a -
+ jmp findPattern
+incrVal:
+ 
+ movq $1, %r12
 
-  movq $0x370cfe43, (%r13) #decb, (%r15, %r14, 1)
-  addq $4, %r13
+ #OPTIMISATION check for sequence of + or -
+ findPattern:
+   
+   incq %r14
 
-  incq %r14
-  jmp parsingLoop
+   cmpb $43, (%r15, %r14, 1)
+   je plus
+   
+   cmpb $45, (%r15, %r14, 1)
+   je minus
+
+   jmp end
+
+   plus:
+     addq $1, %r12
+     jmp findPattern
+
+   minus:
+     subq $1, %r12
+     jmp findPattern
+ 
+ end:
+   #add r12 to the location
+   cmpq $0, %r12
+   je parsingLoop
+
+   movq $0x3704814b, (%r13) #addq (value at r12), (%r15, %r14, 1)
+   addq $4, %r13
+   movq %r12, (%r13)
+   addq $4, %r13
+   
+   movq $0, %r12
+   jmp parsingLoop
+ 
 
   
 loopStart:
-  cmpw $0x5d3d, 1(%r15, %r14, 1)
-  jne zeroing
+  
+  cmpb $45, 1(%r15, %r14,1)
+  jne normalCase
+  cmpb $93, 2(%r15, %r14, 1)
+  jne normalCase
   
   movq $0x003704c74b, (%r13)
-  addq $5, %r13
+  addq $8, %r13
   addq $3, %r14
   jmp parsingLoop
 
-
-zeroing:
+normalCase:
   pushq %r13
   mov $0x00373c8043, (%r13)
   addq $5, %r13
@@ -200,23 +229,119 @@ loopEnd:
     incq %r14
     jmp parsingLoop
 
-  
 
- 
+
+
+
+#  
+#loopStart:
+#  
+#  push %r14
+#  
+#  incq %r14
+#
+#  cmpb $45, (%r15, %r14, 1) #We check if we have a -] following the [ because that means we 0 the cell
+#  jne normalCase
+#
+#  incq %r14
+#  cmpb $93, (%r15, %r14, 1)
+#  jne normalCase
+#  
+#  pop %r14
+#  
+#  
+#  movq $0x003704c74b, (%r13) #mov $0, (%r15, %r14, 1)
+#  addq $8, %r13
+#  #IF -] does follow then we 0 the cell and jump the instruction after the -]
+#  addq $3, %r14 # jump 3 instruction instead of 1 to go to after the -]
+#  jmp parsingLoop
+#
+#
+#
+#normalCase:
+#
+#  pop %r14
+#  pushq %r13 #push current instruction location, so that we can jump back to it when looping
+#  mov $0x00373c8043, (%r13) #cmpb $0, (%r15, %r14, 1)
+#  addq $5, %r13
+#  movq $0x840f, (%r13)
+#  addq $6, %r13
+#  incq %r14
+#  jmp parsingLoop
+#
+#
+#
+#loopEnd:
+#
+#    mov $0x00373c8043, (%r13) #cmpb $0, (%r15, %r14, 1)
+#    addq $5, %r13
+#    movq $0x850f, (%r13)    #jne {begin} which we now calculate
+#    addq $2, %r13
+#    
+#    #begin_jump
+#    popq %r12
+#    movq %r13, %rax
+#    subq %r12, %rax
+#    subq $7, %rax
+#    mov %eax, 7(%r12) #write offset to jump location
+#    negq %rax
+#    mov %eax, (%r13)
+#    addq $4, %r13
+#    incq %r14
+#    jmp parsingLoop
+#
+#  
+
+
+
+
+
+
+
+
+
+
 prevAddr:
-
-  incq %r14
-
-  movq $0xceff49, (%r13) #decq %r14
-  addq $3, %r13
-  jmp parsingLoop
-
-
+ movq $-1, %r12 #we start at -1 if we come from a -
+ jmp findPatternAddr
 nextAddr:
-  incq %r14
-  movq $0xc6ff49, (%r13) #incq %r14
-  addq $3, %r13
-  jmp parsingLoop
+ movq $1, %r12
+ #OPTIMISATION check for sequence of + or -
+ findPatternAddr:
+   
+   incq %r14
+
+   cmpb $62, (%r15, %r14, 1)
+   je plusAddr
+   
+   cmpb $60, (%r15, %r14, 1)
+   je minusAddr
+    
+   cmpb $10, (%r15, %r14, 1)
+   je findPatternAddr
+
+   jmp endAddr
+
+   plusAddr:
+     addq $1, %r12
+     jmp findPatternAddr
+
+   minusAddr:
+     subq $1, %r12
+     jmp findPatternAddr
+ 
+ endAddr:
+   #add r12 to the location
+   cmpq $0, %r12
+   je parsingLoop
+
+   movq $0xc68149, (%r13) #addq (value at r12), %r14
+   addq $3, %r13
+   movq %r12, (%r13)
+   addq $4, %r13
+   
+   movq $0, %r12
+   jmp parsingLoop
 
 
 endOfParsing:
