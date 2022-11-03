@@ -48,10 +48,14 @@ compile:
   pushq %r15
   pushq %r14
   pushq %r13
+  pushq %r11
+  pushq %r9
+  
 
   movq %rdi, %r15 
   movq $0, %r14
-  
+  movq $0, %r11
+
   #Create space and map to use like an array[] for the instructions using
   # mmap() c function. args : ( *address, length, protect, flags, filedes, offset)
   movq $0, %rdi # *address
@@ -61,7 +65,10 @@ compile:
   movq $-1, %r8 #no dile descriptor
   movq $0, %r9 #0 offset we want to start at the beggining
   call mmap
+  
 
+
+  
   movq %rax, %r13  # address of first memory space
   pushq %r13
 
@@ -123,8 +130,7 @@ printChar:
   addq $8, %r13
   movq $0xD2FF41, (%r13)      #call *%r10
   addq $3, %r13
-
-  
+ 
   jmp parsingLoop
 
 
@@ -163,6 +169,9 @@ incrVal:
    cmpb $45, (%r15, %r14, 1)
    je minus
 
+   cmpb $10, (%r15, %r14, 1)
+   je findPattern
+
    jmp end
 
    plus:
@@ -190,13 +199,35 @@ incrVal:
   
 loopStart:
   
-  cmpb $45, 1(%r15, %r14,1)
-  jne normalCase
-  cmpb $93, 2(%r15, %r14, 1)
-  jne normalCase
-  
-  movq $0x003704c74b, (%r13)
-  addq $8, %r13
+#  emptySpaceCheck:
+#
+#    cmpb $10, 1(%r15, %r14, 1)
+#    je firstEmptySpace
+#    cmpb $10, 2(%r15, %r14, 1)
+#    je secondEmptySpace
+#  
+ noEemptySpace:
+
+    cmpb $45, 1(%r15, %r14,1)
+    jne normalCase
+    cmpb $93, 2(%r15, %r14, 1)
+    jne normalCase
+#
+#  firstEmptySpace:
+#    cmpb $45, 2(%r15, %r14,1)
+#    jne normalCase
+#    cmpb $93, 3(%r15, %r14, 1)
+#    jne normalCase
+#  
+#  secondEmptySpace:
+#    cmpb $45, 1(%r15, %r14, 1)
+#    jne normalCase
+#    cmpb $93, 3(%r15, %r14, 1)
+#    jne normalCase
+ #jmp normalCase
+zeroCell:
+  movq $0x003704c643, (%r13) #movb $0, (%r15, %r14, 1)
+  addq $5, %r13
   addq $3, %r14
   jmp parsingLoop
 
@@ -209,96 +240,26 @@ normalCase:
   incq %r14
   jmp parsingLoop
 
-
+copyLoop:
+  
 
 loopEnd:
 
-    mov $0x00373c8043, (%r13)
+    mov $0x00373c8043, (%r13) #cmpb $0, (%r15, %r14, 1)
     addq $5, %r13
     movq $0x850f, (%r13)    #jne begin
     addq $2, %r13
-
-    popq %r12
-    movq %r13, %rax
-    subq %r12, %rax
-    subq $7, %rax
-    mov %eax, 7(%r12)
-    negq %rax
-    mov %eax, (%r13)
+    
+    popq %r12 #get start loop address
+    movq %r13, %rax 
+    subq %r12, %rax #Calculate jump (current - old)
+    subq $7, %rax 
+    mov %eax, 7(%r12) #Add it to begining loop so we know where to jump if 0
+    negq %rax #reverse it
+    mov %eax, (%r13) #add jump to restart
     addq $4, %r13
     incq %r14
     jmp parsingLoop
-
-
-
-
-
-#  
-#loopStart:
-#  
-#  push %r14
-#  
-#  incq %r14
-#
-#  cmpb $45, (%r15, %r14, 1) #We check if we have a -] following the [ because that means we 0 the cell
-#  jne normalCase
-#
-#  incq %r14
-#  cmpb $93, (%r15, %r14, 1)
-#  jne normalCase
-#  
-#  pop %r14
-#  
-#  
-#  movq $0x003704c74b, (%r13) #mov $0, (%r15, %r14, 1)
-#  addq $8, %r13
-#  #IF -] does follow then we 0 the cell and jump the instruction after the -]
-#  addq $3, %r14 # jump 3 instruction instead of 1 to go to after the -]
-#  jmp parsingLoop
-#
-#
-#
-#normalCase:
-#
-#  pop %r14
-#  pushq %r13 #push current instruction location, so that we can jump back to it when looping
-#  mov $0x00373c8043, (%r13) #cmpb $0, (%r15, %r14, 1)
-#  addq $5, %r13
-#  movq $0x840f, (%r13)
-#  addq $6, %r13
-#  incq %r14
-#  jmp parsingLoop
-#
-#
-#
-#loopEnd:
-#
-#    mov $0x00373c8043, (%r13) #cmpb $0, (%r15, %r14, 1)
-#    addq $5, %r13
-#    movq $0x850f, (%r13)    #jne {begin} which we now calculate
-#    addq $2, %r13
-#    
-#    #begin_jump
-#    popq %r12
-#    movq %r13, %rax
-#    subq %r12, %rax
-#    subq $7, %rax
-#    mov %eax, 7(%r12) #write offset to jump location
-#    negq %rax
-#    mov %eax, (%r13)
-#    addq $4, %r13
-#    incq %r14
-#    jmp parsingLoop
-#
-#  
-
-
-
-
-
-
-
-
 
 
 prevAddr:
